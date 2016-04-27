@@ -10,11 +10,11 @@ Kick off queueing 'sticks of hay' (lines of text) onto a farily hardcoded messag
 
 JMS queue reads from:
 
-  192.168.0.119;port=5445
+    192.168.0.119;port=5445
 
 JMS queue writes to:
 
-  http-remoting://192.168.0.119:8080
+    http-remoting://192.168.0.119:8080
   
 Sample Wildfly standalone.xml:
 
@@ -54,8 +54,8 @@ Sample Wildfly standalone.xml:
           
 Also make sure the following user is configured for 'guest' role:
 
-User: jms
-Password: jms
+    User: jms
+    Password: jms
 
 ## localhost:8080\limits\rest\config?bodyDelayMillis=0&leafDelayMillis=100&numAsyncRequests=3&numWorkers=3&useThreadForAsync=true
 
