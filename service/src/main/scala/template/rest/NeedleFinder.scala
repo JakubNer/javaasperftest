@@ -9,7 +9,7 @@ import template.bcrypt.BCrypt
 @MessageDriven(
   activationConfig = Array[ActivationConfigProperty](
     new ActivationConfigProperty(propertyName = "destination", propertyValue = "java:jboss/exported/jms/queues/HaystackQueue"),
-    new ActivationConfigProperty(propertyName = "maxSession", propertyValue = "2"),
+    new ActivationConfigProperty(propertyName = "maxSession", propertyValue = "3"),
     new ActivationConfigProperty(propertyName = "destinationType", propertyValue = "javax.jms.Queue"),
     new ActivationConfigProperty(propertyName = "acknowledgeMode", propertyValue = "Auto-acknowledge"),
     new ActivationConfigProperty(propertyName="user", propertyValue = "jms"),
@@ -23,14 +23,19 @@ class NeedleFinder extends MessageListener {
   @Override
   def onMessage(message:javax.jms.Message): Unit = {
     val msg: NeedleCandidateMessage = message.asInstanceOf[ObjectMessage].getObject().asInstanceOf[NeedleCandidateMessage]
-    if (msg.line.length == 0) {
+    if (msg.msgid == -1) {
       println("DONE MESSAGE")
-      backchannelSend(msg.line)
-    } else if (BCrypt.checkpw(msg.line, msg.hash)) {
-      println("MATCH MESSAGE %s :: %s".format(msg.line, msg.hash))
-      backchannelSend(msg.line)
+      backchannelSend(null)
     } else {
-      println("NON MATCH MESSAGE %s :: %s".format(msg.line, msg.hash))
+      println("PROCESSING MESSAGE %d :: %d/%d".format(msg.msgid, msg.lines.size, msg.hashes.size))
+      for (hash <- msg.hashes) {
+        for (line <- msg.lines) {
+          if (line != null && BCrypt.checkpw(line, hash)) {
+            println("MATCH MESSAGE %s :: %s".format(line, hash))
+            backchannelSend(line)
+          }
+        }
+      }
     }
   }
 
@@ -53,4 +58,8 @@ class NeedleFinder extends MessageListener {
     session.close
     connection.close
   }
+}
+
+object NeedleFinder {
+
 }

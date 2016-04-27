@@ -17,17 +17,23 @@ class Haystack {
   private var session: QueueSession = null
   private var sender: QueueSender = null
 
+  private val NUM_LINES_PER_MESSAGE = 3
+
   @GET
   @Produces(Array("text/plain"))
   def haystack(): Response = {
     queueOpen
     Tracker.start
-    for(hash <- getLinesOfText("/hashes2.txt")) {
-      Tracker.expected += 1
-      for (line <- getLinesOfText("/haystack2.txt"))
-        queueUp(line, hash)
+    Tracker.hashes = getLinesOfText("/hashes2.txt").toArray
+    var it = getLinesOfText("/haystack2.txt")
+    var msgid = 0
+    while (it.hasNext) {
+      msgid += 1
+      var lines: Array[String] = Array.fill[String](NUM_LINES_PER_MESSAGE)(null)
+      it.copyToArray(lines, 0, NUM_LINES_PER_MESSAGE)
+      queueUp(msgid, lines, Tracker.hashes)
     }
-    queueUp("","")
+    queueUp(-1,null,null)
     queueClose
     return Response.status(200).entity("OK %s".format(Stats.getDumpageStr())).build
   }
@@ -43,9 +49,10 @@ class Haystack {
     connection.close
   }
 
-  def queueUp(line: String, hash:String): Unit = {
-    println("queueUp %s/%s".format(line,hash))
-    var msg: NeedleCandidateMessage = new NeedleCandidateMessage(line, hash)
+  def queueUp(msgid: Int, lines: Array[String], hashes:Array[String]): Unit = {
+    if (msgid == -1) println("queueUp %d :: DONE".format(msgid))
+    else println("queueUp %d :: %d/%d".format(msgid, lines.length,hashes.length))
+    var msg: NeedleCandidateMessage = new NeedleCandidateMessage(msgid, lines, hashes)
     var oMsg: ObjectMessage = session.createObjectMessage(msg)
     sender.send(oMsg)
   }
@@ -59,13 +66,13 @@ class Haystack {
 object Tracker {
   private val date: java.text.SimpleDateFormat = new java.text.SimpleDateFormat("HH:mm:ss:SSS")
 
-  var expected: Int = 0
+  var hashes: Array[String] = null
   var found: ListBuffer[String] = ListBuffer[String]()
   var start_time: Long = 0L
   var end_time: Long = 0L
 
   def start = {
-    expected = 0
+    hashes = null
     found = ListBuffer[String]()
     start_time = System.currentTimeMillis()
     println("START %s".format(date.format((new Date))))
@@ -74,18 +81,17 @@ object Tracker {
   def end = {
     end_time = System.currentTimeMillis()
     println("END %s".format(date.format((new Date))))
-    if (found.length == expected) {
+    found.map(str => println("IN END FOUND : '%s'".format(str)))
+    if (found.size == hashes.length) {
       println("Found all %d needles in %d ms".format(found.length, end_time - start_time))
-      found.map(str => println("FOUND : '%s'".format(str)))
     } else {
-      println("something went wrong!...did not find all %d needles!".format(expected))
-      found.map(str => println("FOUND : '%s'".format(str)))
+      println("something went wrong!...did not find all %d needles! (Only %d)".format(hashes.length,found.size))
     }
   }
 }
 
 @SerialVersionUID(100L)
-class NeedleCandidateMessage (val line: String, val hash:String) extends Serializable
+class NeedleCandidateMessage (val msgid: Int, val lines: Array[String], val hashes:Array[String]) extends Serializable
 
 @SerialVersionUID(101L)
 class BackchannelMessage (val foundLine: String) extends Serializable
@@ -102,11 +108,11 @@ class HaystackBackchannelWorker extends MessageListener {
   @Override
   def onMessage(message:javax.jms.Message): Unit = {
     val msg: BackchannelMessage = message.asInstanceOf[ObjectMessage].getObject().asInstanceOf[BackchannelMessage]
-    if (msg.foundLine.length() > 0) {
+    if (msg.foundLine == null) {
+      Tracker.end
+    } else {
       println("FOUND : '%s'".format(msg.foundLine))
       Tracker.found += msg.foundLine
-    } else {
-      Tracker.end
     }
   }
 }
