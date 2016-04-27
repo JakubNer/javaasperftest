@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<messaging-deployment xmlns="urn:jboss:messaging-deployment:1.0">
+    <hornetq-server>
+        <jms-destinations>
+            <!--<jms-queue name="TestQueue">-->
+                <!--<entry name="/queue/TestQueue"/>-->
+            <!--</jms-queue>-->
+            <!--<jms-queue name="HaystackQueue">-->
+                <!--<entry name="/queue/HaystackQueue"/>-->
+                <!--<entry name="java:jboss/exported/jms/queues/HaystackQueue"/>-->
+            <!--</jms-queue>-->
+            <!--<jms-queue name="HaystackBackchannelQueue">-->
+                <!--<entry name="/queue/HaystackBackchannelQueue"/>-->
+                <!--<entry name="java:jboss/exported/jms/queues/HaystackBackchannelQueue"/>-->
+            <!--</jms-queue>-->
+        </jms-destinations>
+    </hornetq-server>
+</messaging-deployment>
