@@ -36,6 +36,7 @@
                 <artifactId>wildfly-jms-client-bom</artifactId>
                 <version>${wildfly.version}</version>
                 <type>pom</type>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.jboss.resteasy</groupId>
@@ -88,5 +89,8 @@
     <modules>
 		<module>service</module>
 		<module>webapp</module>
+        <module>messaging</module>
+        <module>consumer</module>
+        <module>producer</module>
 	</modules>
 </project>

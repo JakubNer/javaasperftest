@@ -98,10 +98,14 @@ class BackchannelMessage (val foundLine: String) extends Serializable
 
 @MessageDriven(
   activationConfig = Array[ActivationConfigProperty](
-    new ActivationConfigProperty(propertyName = "destination", propertyValue = "/queue/HaystackBackchannelQueue"),
+    new ActivationConfigProperty(propertyName = "destination", propertyValue = "java:jboss/exported/jms/queues/HaystackBackchannelQueue"),
     new ActivationConfigProperty(propertyName = "maxSession", propertyValue = "1"),
     new ActivationConfigProperty(propertyName = "destinationType", propertyValue = "javax.jms.Queue"),
-    new ActivationConfigProperty(propertyName = "acknowledgeMode", propertyValue = "Auto-acknowledge")),
+    new ActivationConfigProperty(propertyName = "acknowledgeMode", propertyValue = "Auto-acknowledge"),
+    new ActivationConfigProperty(propertyName="user", propertyValue = "jms"),
+    new ActivationConfigProperty(propertyName="password", propertyValue = "jms"),
+    new ActivationConfigProperty(propertyName="connectorClassName", propertyValue = "org.hornetq.core.remoting.impl.netty.NettyConnectorFactory"),
+    new ActivationConfigProperty(propertyName="connectionParameters", propertyValue = "host=192.168.0.119;port=5445")),
   messageListenerInterface = classOf[MessageListener]
 )
 class HaystackBackchannelWorker extends MessageListener {

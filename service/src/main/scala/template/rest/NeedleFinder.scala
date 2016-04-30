@@ -47,16 +47,17 @@ class NeedleFinder extends MessageListener {
     props.put(Context.SECURITY_PRINCIPAL, "jms");
     props.put(Context.SECURITY_CREDENTIALS, "jms");
     val ic: InitialContext = new InitialContext(props);
-    val queue: Queue = ic.lookup("java:/jms/queues/HaystackBackchannelQueue").asInstanceOf[Queue]
-    val factory: QueueConnectionFactory = ic.lookup("java:/jms/RemoteConnectionFactory").asInstanceOf[QueueConnectionFactory]
+    val factory: QueueConnectionFactory = ic.lookup("jms/RemoteConnectionFactory").asInstanceOf[QueueConnectionFactory]
     var connection: QueueConnection = factory.createQueueConnection("jms","jms")
     var session: QueueSession = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE)
+    val queue: Queue = ic.lookup("jms/queues/HaystackBackchannelQueue").asInstanceOf[Queue]
     var sender: QueueSender = session.createSender(queue);
     var msg: BackchannelMessage = new BackchannelMessage(lineFound)
     var oMsg: ObjectMessage = session.createObjectMessage(msg)
     sender.send(oMsg)
     session.close
     connection.close
+    println("backchannel sent %s".format(lineFound))
   }
 }
 
