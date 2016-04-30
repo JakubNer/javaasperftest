@@ -29,14 +29,18 @@
                 <groupId>org.wildfly</groupId>
                 <artifactId>wildfly-client-all</artifactId>
                 <version>${wildfly.version}</version>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.wildfly</groupId>
                 <artifactId>wildfly-jms-client-bom</artifactId>
                 <version>${wildfly.version}</version>
                 <type>pom</type>
-                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.wildfly</groupId>
+                <artifactId>wildfly-ejb-client-bom</artifactId>
+                <version>${wildfly.version}</version>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.jboss.resteasy</groupId>

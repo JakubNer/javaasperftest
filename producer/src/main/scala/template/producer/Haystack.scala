@@ -1,15 +1,19 @@
 package template.producer
 
-import javax.ejb.{ActivationConfigProperty, MessageDriven}
+import javax.ejb.{ActivationConfigProperty, MessageDriven, Startup, Singleton}
 import javax.jms.{MessageListener, ObjectMessage, Queue, QueueConnection, QueueConnectionFactory, QueueSender, QueueSession, Session}
 import javax.naming.InitialContext
 import java.io.InputStream
 import java.util.Date
+import javax.annotation.PostConstruct
+
 import scala.collection.mutable.ListBuffer
 import template.messaging._
 
+@Startup
+@Singleton
+class Haystack {
 
-object Haystack {
   private val queue: Queue = InitialContext.doLookup("/queue/HaystackQueue");
   private val factory: QueueConnectionFactory = InitialContext.doLookup("java:/ConnectionFactory");
   private var connection: QueueConnection = null
@@ -18,8 +22,7 @@ object Haystack {
 
   private val NUM_LINES_PER_MESSAGE = 3
 
-  haystack()
-
+  @PostConstruct
   def haystack(): Unit = {
     queueOpen
     Tracker.start

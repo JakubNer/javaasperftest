@@ -6,6 +6,7 @@ import javax.naming.{Context, InitialContext}
 import java.util.Properties
 import template.bcrypt.BCrypt
 import template.messaging._
+import org.jboss.naming.remote.client.InitialContextFactory
 
 @MessageDriven(
   activationConfig = Array[ActivationConfigProperty](
