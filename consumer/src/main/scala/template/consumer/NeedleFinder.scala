@@ -1,12 +1,14 @@
 package template.consumer
 
 import javax.ejb.{ActivationConfigProperty, MessageDriven}
-import javax.jms.{QueueSender, QueueSession, Session, Queue, ObjectMessage, QueueConnection, QueueConnectionFactory, MessageListener}
-import javax.naming.{Context, InitialContext}
-import java.util.Properties
+import javax.jms._
+import java.util.{Properties,Map,HashMap}
+
 import template.bcrypt.BCrypt
 import template.messaging._
-import org.jboss.naming.remote.client.InitialContextFactory
+import org.hornetq.core.remoting.impl.netty.NettyConnectorFactory
+import org.hornetq.api.core.TransportConfiguration
+import org.hornetq.api.jms.{HornetQJMSClient, JMSFactoryType}
 
 @MessageDriven(
   activationConfig = Array[ActivationConfigProperty](
@@ -44,19 +46,23 @@ class NeedleFinder extends MessageListener {
   def backchannelSend(lineFound:String): Unit = {
     println("backchannel %s".format(lineFound))
     var props : Properties = new Properties();
-    props.put(Context.INITIAL_CONTEXT_FACTORY,"org.jboss.naming.remote.client.InitialContextFactory");
-    props.put(Context.PROVIDER_URL, "http-remoting://192.168.0.119:8080");
-    props.put(Context.SECURITY_PRINCIPAL, "jms");
-    props.put(Context.SECURITY_CREDENTIALS, "jms");
-    val ic: InitialContext = new InitialContext(props);
-    val factory: QueueConnectionFactory = ic.lookup("jms/RemoteConnectionFactory").asInstanceOf[QueueConnectionFactory]
-    var connection: QueueConnection = factory.createQueueConnection("jms","jms")
-    var session: QueueSession = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE)
-    val queue: Queue = ic.lookup("jms/queues/HaystackBackchannelQueue").asInstanceOf[Queue]
-    var sender: QueueSender = session.createSender(queue);
+
+    var connectionParams : Map[String,Object] = new HashMap[String, Object]
+    connectionParams.put(org.hornetq.core.remoting.impl.netty.TransportConstants.PORT_PROP_NAME,"5445")
+    connectionParams.put(org.hornetq.core.remoting.impl.netty.TransportConstants.HOST_PROP_NAME,"192.168.0.119")
+    var transportConfiguration: TransportConfiguration = new TransportConfiguration(classOf[NettyConnectorFactory].getName,connectionParams)
+
+    val factory: ConnectionFactory = HornetQJMSClient.createConnectionFactoryWithoutHA(JMSFactoryType.CF,transportConfiguration)
+    var connection: Connection = factory.createConnection("jms","jms")
+    var session: Session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val queue: Queue = HornetQJMSClient.createQueue("HaystackBackchannelQueue")
+    var sender: MessageProducer = session.createProducer(queue);
     var msg: BackchannelMessage = new BackchannelMessage(lineFound)
     var oMsg: ObjectMessage = session.createObjectMessage(msg)
-    sender.send(oMsg)
+    sender.send(oMsg, new CompletionListener {
+      override def onException(message: Message, e: Exception): Unit = {println(">>> EXCEPTION " + e)}
+      override def onCompletion(message: Message): Unit = {println("message: " + message + " :: " + message.getJMSDestination)}
+    })
     session.close
     connection.close
     println("backchannel sent %s".format(lineFound))

@@ -2,6 +2,12 @@
 
 Maven project to generate a WAR with a bunch of endpoint to excercise some architectural approaches on an application server.
 
+# YouTube Videos
+
+## producer/consumer
+
+
+
 # Endpoints
 
 ## http://localhost:8080/limits/rest/haystack
@@ -107,3 +113,37 @@ Like 'queued' except Akka is used with a nicer backchannel.
   * see 'sync' above
 * iter
   * see 'sync' above
+  
+## Demo Storyboard (producer/consumer)
+
+This is the story board for the producer/consumer video.
+
+    // @ no shiny text with no entry sign
+    
+    This solution is easily coded up using standard technologies.
+    
+    This solution is easily deployed and scaled out using nothing else than JBoss, WildFly in this case.
+    
+    // @ four ssh sessions
+    
+    We're using four WildFly servers running in Virtual Machines on somewhat low powered personal PCs.  
+    
+    I've connected to all of them via PuTTY SSH
+    
+    // @ zoom red putty
+    
+    The red one will be where I start my producer.  
+    
+    // @ zoom out
+    
+    The others will be consumers.
+    
+    // file system deployment of simple jars leveraging CDI
+    
+    // demo with small number of files
+    
+    // no scaling needed?  do it on single instance: red
+    
+    // scaling needed, distribute.
+
+
