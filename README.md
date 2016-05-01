@@ -120,7 +120,7 @@ This is the story board for the producer/consumer video.
     
     This demo shows a solution to a needle in a haystack problem.  A "haystack" of many text phrases
     contains several phrases that are "needles" to be found.  The needles are to be found are provided as
-    bcrypt hashes.
+    b-crypt hashes.
     
     The solution has one producer throwing batches of phrases--the hay--along with all the hashed needles,
     onto a queue.  A multitude of worker consumers pulls each batche off the queue and tries to find the needles
