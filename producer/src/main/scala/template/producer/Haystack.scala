@@ -20,14 +20,14 @@ class Haystack {
   private var session: QueueSession = null
   private var sender: QueueSender = null
 
-  private val NUM_LINES_PER_MESSAGE = 3
+  private val NUM_LINES_PER_MESSAGE = 7500
 
   @PostConstruct
   def haystack(): Unit = {
     queueOpen
     Tracker.start
-    Tracker.hashes = getLinesOfText("/hashes2.txt").toArray
-    var it = getLinesOfText("/haystack2.txt")
+    Tracker.hashes = getLinesOfText("/hashes.txt").toArray
+    var it = getLinesOfText("/haystack.txt")
     var msgid = 0
     while (it.hasNext) {
       msgid += 1
