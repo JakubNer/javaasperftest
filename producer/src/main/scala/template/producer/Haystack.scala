@@ -67,8 +67,10 @@ class Haystack {
 
   def queueClear = {
     println("queueClear start")
+    connection.start
     var num : Int = 0
-    while (consumer.receiveNoWait() != null) {num+=1}
+    while (consumer.receiveNoWait() != null) {num += 1}
+    connection.stop
     println("queueClear cleared %d messages".format(num))
   }
 
