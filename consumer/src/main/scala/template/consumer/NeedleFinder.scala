@@ -27,23 +27,18 @@ class NeedleFinder extends MessageListener {
   @Override
   def onMessage(message:javax.jms.Message): Unit = {
     val msg: NeedleCandidateMessage = message.asInstanceOf[ObjectMessage].getObject().asInstanceOf[NeedleCandidateMessage]
-    if (msg.msgid == -1) {
-      println("DONE MESSAGE")
-      backchannelSend(null)
-    } else {
-      println("PROCESSING MESSAGE %d :: %d/%d".format(msg.msgid, msg.lines.size, msg.hashes.size))
-      for (hash <- msg.hashes) {
-        for (line <- msg.lines) {
-          if (line != null && BCrypt.checkpw(line, hash)) {
-            println("MATCH MESSAGE %s :: %s".format(line, hash))
-            backchannelSend(line)
-          }
+    println("PROCESSING MESSAGE %d :: %d/%d".format(msg.msgid, msg.lines.size, msg.hashes.size))
+    for (hash <- msg.hashes) {
+      for (line <- msg.lines) {
+        if (line != null && BCrypt.checkpw(line, hash)) {
+          println("MATCH MESSAGE %s :: %s".format(line, hash))
+          backchannelSend(line,hash)
         }
       }
     }
   }
 
-  def backchannelSend(lineFound:String): Unit = {
+  def backchannelSend(lineFound:String,hashFound:String): Unit = {
     println("backchannel %s".format(lineFound))
     var props : Properties = new Properties();
 
@@ -57,7 +52,7 @@ class NeedleFinder extends MessageListener {
     var session: Session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     val queue: Queue = HornetQJMSClient.createQueue("HaystackBackchannelQueue")
     var sender: MessageProducer = session.createProducer(queue);
-    var msg: BackchannelMessage = new BackchannelMessage(lineFound)
+    var msg: BackchannelMessage = new BackchannelMessage(lineFound,hashFound)
     var oMsg: ObjectMessage = session.createObjectMessage(msg)
     sender.send(oMsg, new CompletionListener {
       override def onException(message: Message, e: Exception): Unit = {println(">>> EXCEPTION " + e)}

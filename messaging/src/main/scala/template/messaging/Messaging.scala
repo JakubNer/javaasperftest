@@ -4,4 +4,4 @@ package template.messaging
 class NeedleCandidateMessage (val msgid: Int, val lines: Array[String], val hashes:Array[String]) extends Serializable
 
 @SerialVersionUID(101L)
-class BackchannelMessage (val foundLine: String) extends Serializable
+class BackchannelMessage (val foundLine: String, val foundHash: String) extends Serializable

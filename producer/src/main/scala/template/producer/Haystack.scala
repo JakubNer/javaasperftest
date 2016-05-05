@@ -1,7 +1,7 @@
 package template.producer
 
 import javax.ejb.{ActivationConfigProperty, MessageDriven, Startup, Singleton}
-import javax.jms.{MessageListener, ObjectMessage, Queue, QueueConnection, QueueConnectionFactory, QueueSender, QueueSession, Session}
+import javax.jms.{MessageListener, MessageConsumer, ObjectMessage, Queue, QueueConnection, QueueConnectionFactory, QueueSender, QueueSession, Session}
 import javax.naming.InitialContext
 import java.io.InputStream
 import java.util.Date
@@ -19,30 +19,37 @@ class Haystack {
   private var connection: QueueConnection = null
   private var session: QueueSession = null
   private var sender: QueueSender = null
+  private var consumer: MessageConsumer = null
 
-  private val NUM_LINES_PER_MESSAGE = 7500
+  private val NUM_LINES_PER_MESSAGE = 3
 
   @PostConstruct
   def haystack(): Unit = {
     queueOpen
+    queueClear
     Tracker.start
-    Tracker.hashes = getLinesOfText("/hashes.txt").toArray
-    var it = getLinesOfText("/haystack.txt")
+    Tracker.hashes = getLinesOfText("/hashes2.txt").toArray
+    var it = getLinesOfText("/haystack2.txt")
     var msgid = 0
-    while (it.hasNext) {
-      msgid += 1
-      var lines: Array[String] = Array.fill[String](NUM_LINES_PER_MESSAGE)(null)
-      it.copyToArray(lines, 0, NUM_LINES_PER_MESSAGE)
-      queueUp(msgid, lines, Tracker.hashes)
+    for (hash <- Tracker.hashes) {
+      while (it.hasNext) {
+        msgid += 1
+        var lines: Array[String] = Array.fill[String](NUM_LINES_PER_MESSAGE)(null)
+        it.copyToArray(lines, 0, NUM_LINES_PER_MESSAGE)
+        queueUp(msgid, lines, Array(hash))
+      }
+      Tracker.waitTillFound(hash)
+      queueClear
     }
-    queueUp(-1,null,null)
     queueClose
+    Tracker.end
   }
 
   def queueOpen = {
     connection = factory.createQueueConnection();
     session = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
     sender = session.createSender(queue);
+    consumer = session.createConsumer(queue);
   }
 
   def queueClose = {
@@ -58,6 +65,13 @@ class Haystack {
     sender.send(oMsg)
   }
 
+  def queueClear = {
+    println("queueClear start")
+    var num : Int = 0
+    while (consumer.receiveNoWait() != null) {num+=1}
+    println("queueClear cleared %d messages".format(num))
+  }
+
   def getLinesOfText(fileName:String): Iterator[String] = {
     val stream : InputStream = getClass.getResourceAsStream(fileName)
     return scala.io.Source.fromInputStream(stream).getLines
@@ -68,13 +82,15 @@ object Tracker {
   private val date: java.text.SimpleDateFormat = new java.text.SimpleDateFormat("HH:mm:ss:SSS")
 
   var hashes: Array[String] = null
-  var found: ListBuffer[String] = ListBuffer[String]()
+  var foundLine: ListBuffer[String] = ListBuffer[String]()
+  var foundHash: ListBuffer[String] = ListBuffer[String]()
   var start_time: Long = 0L
   var end_time: Long = 0L
 
   def start = {
     hashes = null
-    found = ListBuffer[String]()
+    foundLine = ListBuffer[String]()
+    foundHash = ListBuffer[String]()
     start_time = System.currentTimeMillis()
     println("START %s".format(date.format((new Date))))
   }
@@ -82,11 +98,30 @@ object Tracker {
   def end = {
     end_time = System.currentTimeMillis()
     println("END %s".format(date.format((new Date))))
-    found.map(str => println("IN END FOUND : '%s'".format(str)))
-    if (found.size == hashes.length) {
-      println("Found all %d needles in %d ms".format(found.length, end_time - start_time))
+    foundLine.map(str => println("IN END FOUND : '%s'".format(str)))
+    if (foundLine.size == hashes.length) {
+      println("Found all %d needles in %d ms".format(foundLine.length, end_time - start_time))
     } else {
-      println("something went wrong!...did not find all %d needles! (Only %d)".format(hashes.length,found.size))
+      println("something went wrong!...did not find all %d needles! (Only %d)".format(hashes.length,foundLine.size))
+    }
+  }
+
+  def doFind (line:String,hash:String) : Unit = {
+    println("FOUND : '%s' for '%s'".format(line,hash))
+    Tracker.foundLine +=line
+    Tracker.foundHash += hash
+    Tracker.foundHash.synchronized {
+      Tracker.foundHash.notifyAll
+    }
+  }
+
+  def waitTillFound(hash:String) : Unit = {
+    Tracker.foundHash.synchronized {
+      while (! Tracker.foundHash.contains(hash)) {
+        println("waitTillFound: waiting... '%s'".format(hash))
+        Tracker.foundHash.wait
+      }
+      println("waitTillFound: found... '%s'".format(hash))
     }
   }
 }
@@ -107,12 +142,7 @@ class HaystackBackchannelWorker extends MessageListener {
   @Override
   def onMessage(message:javax.jms.Message): Unit = {
     val msg: BackchannelMessage = message.asInstanceOf[ObjectMessage].getObject().asInstanceOf[BackchannelMessage]
-    if (msg.foundLine == null) {
-      Tracker.end
-    } else {
-      println("FOUND : '%s'".format(msg.foundLine))
-      Tracker.found += msg.foundLine
-    }
+    Tracker.doFind(msg.foundLine, msg.foundHash)
   }
 }
 
