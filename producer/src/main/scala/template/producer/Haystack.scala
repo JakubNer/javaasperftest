@@ -1,11 +1,15 @@
 package template.producer
 
-import javax.ejb.{ActivationConfigProperty, MessageDriven, Startup, Singleton}
-import javax.jms.{MessageListener, MessageConsumer, ObjectMessage, Queue, QueueConnection, QueueConnectionFactory, QueueSender, QueueSession, Session}
-import javax.naming.InitialContext
+import javax.ejb.{ActivationConfigProperty, MessageDriven, Singleton, Startup}
+import javax.jms.{MessageConsumer, MessageListener, ObjectMessage, Queue, QueueConnection, QueueConnectionFactory, QueueSender, QueueSession, Session}
+import javax.naming.{Context, InitialContext}
+import javax.management.{MBeanServerConnection, ObjectName}
 import java.io.InputStream
-import java.util.Date
+import java.util.{Date, HashMap}
 import javax.annotation.PostConstruct
+import javax.management.MBeanServerInvocationHandler
+import javax.management.remote.{JMXConnector, JMXConnectorFactory, JMXServiceURL}
+import org.hornetq.api.jms.management.JMSQueueControl
 
 import scala.collection.mutable.ListBuffer
 import template.messaging._
@@ -21,28 +25,35 @@ class Haystack {
   private var sender: QueueSender = null
   private var consumer: MessageConsumer = null
 
-  private val NUM_LINES_PER_MESSAGE = 3
+  private val NUM_LINES_PER_MESSAGE = 30000
 
   @PostConstruct
   def haystack(): Unit = {
-    queueOpen
-    queueClear
-    Tracker.start
-    Tracker.hashes = getLinesOfText("/hashes2.txt").toArray
-    var it = getLinesOfText("/haystack2.txt")
-    var msgid = 0
-    for (hash <- Tracker.hashes) {
-      while (it.hasNext) {
-        msgid += 1
-        var lines: Array[String] = Array.fill[String](NUM_LINES_PER_MESSAGE)(null)
-        it.copyToArray(lines, 0, NUM_LINES_PER_MESSAGE)
-        queueUp(msgid, lines, Array(hash))
+    new Thread {
+      override def run = {
+        queueOpen
+        Eraser.erase
+        queueClear
+        Tracker.start
+        Tracker.hashes = getLinesOfText("/hashes.txt").toArray
+        val lines = getLinesOfText("/haystack.txt")
+        var msgid = 0
+        for (hash <- Tracker.hashes) {
+          var it = lines.iterator
+          while (it.hasNext) {
+            msgid += 1
+            var lines: Array[String] = Array.fill[String](NUM_LINES_PER_MESSAGE)(null)
+            it.copyToArray(lines, 0, NUM_LINES_PER_MESSAGE)
+            queueUp(msgid, lines, Array(hash))
+          }
+          Tracker.waitTillFound(hash)
+          Eraser.erase
+          queueClear
+        }
+        queueClose
+        Tracker.end
       }
-      Tracker.waitTillFound(hash)
-      queueClear
-    }
-    queueClose
-    Tracker.end
+    }.start
   }
 
   def queueOpen = {
@@ -57,14 +68,6 @@ class Haystack {
     connection.close
   }
 
-  def queueUp(msgid: Int, lines: Array[String], hashes:Array[String]): Unit = {
-    if (msgid == -1) println("queueUp %d :: DONE".format(msgid))
-    else println("queueUp %d :: %d/%d".format(msgid, lines.length,hashes.length))
-    var msg: NeedleCandidateMessage = new NeedleCandidateMessage(msgid, lines, hashes)
-    var oMsg: ObjectMessage = session.createObjectMessage(msg)
-    sender.send(oMsg)
-  }
-
   def queueClear = {
     println("queueClear start")
     connection.start
@@ -74,9 +77,41 @@ class Haystack {
     println("queueClear cleared %d messages".format(num))
   }
 
-  def getLinesOfText(fileName:String): Iterator[String] = {
+  def queueUp(msgid: Int, lines: Array[String], hashes:Array[String]): Unit = {
+    if (msgid == -1) println("queueUp %d :: DONE".format(msgid))
+    else println("queueUp %d :: %d/%d".format(msgid, lines.length,hashes.length))
+    var msg: NeedleCandidateMessage = new NeedleCandidateMessage(msgid, lines, hashes)
+    var oMsg: ObjectMessage = session.createObjectMessage(msg)
+    sender.send(oMsg)
+  }
+
+  def getLinesOfText(fileName:String): List[String] = {
     val stream : InputStream = getClass.getResourceAsStream(fileName)
-    return scala.io.Source.fromInputStream(stream).getLines
+    return scala.io.Source.fromInputStream(stream).getLines.toList
+  }
+}
+
+object Eraser {
+  var urlString : String = null
+  var serviceURL : JMXServiceURL = null
+  var jmxConnector : JMXConnector = null
+  var connection : MBeanServerConnection = getConn
+
+  def getConn() : MBeanServerConnection = {
+    var env : HashMap[String,AnyRef] = new HashMap[String,AnyRef]()
+    val creds : Array[String] = Array[String]("root","root")
+    env.put(JMXConnector.CREDENTIALS, creds)
+    serviceURL = new JMXServiceURL("service:jmx:http-remoting-jmx://192.168.0.119:9990")
+    jmxConnector = JMXConnectorFactory.connect(serviceURL, env)
+    return jmxConnector.getMBeanServerConnection()
+  }
+
+  def erase = {
+    println("queueClear start")
+    var on : ObjectName = new ObjectName("jboss.as:subsystem=messaging,hornetq-server=default,jms-queue=HaystackQueue")
+    var qc : JMSQueueControl = MBeanServerInvocationHandler.newProxyInstance(connection, on, classOf[JMSQueueControl], false).asInstanceOf[JMSQueueControl]
+    val numremoved = qc.removeMessages(null)
+    println("queueClear stop... removed:%d".format(numremoved))
   }
 }
 
@@ -111,8 +146,8 @@ object Tracker {
   def doFind (line:String,hash:String) : Unit = {
     println("FOUND : '%s' for '%s'".format(line,hash))
     Tracker.foundLine +=line
-    Tracker.foundHash += hash
     Tracker.foundHash.synchronized {
+      Tracker.foundHash += hash
       Tracker.foundHash.notifyAll
     }
   }

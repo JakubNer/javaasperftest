@@ -29,6 +29,7 @@ class NeedleFinder extends MessageListener {
     val msg: NeedleCandidateMessage = message.asInstanceOf[ObjectMessage].getObject().asInstanceOf[NeedleCandidateMessage]
     println("PROCESSING MESSAGE %d :: %d/%d".format(msg.msgid, msg.lines.size, msg.hashes.size))
     for (hash <- msg.hashes) {
+
       for (line <- msg.lines) {
         if (line != null && BCrypt.checkpw(line, hash)) {
           println("MATCH MESSAGE %s :: %s".format(line, hash))
@@ -49,15 +50,12 @@ class NeedleFinder extends MessageListener {
 
     val factory: ConnectionFactory = HornetQJMSClient.createConnectionFactoryWithoutHA(JMSFactoryType.CF,transportConfiguration)
     var connection: Connection = factory.createConnection("jms","jms")
-    var session: Session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    var session: QueueSession = connection.createSession(false, Session.AUTO_ACKNOWLEDGE).asInstanceOf[QueueSession]
     val queue: Queue = HornetQJMSClient.createQueue("HaystackBackchannelQueue")
-    var sender: MessageProducer = session.createProducer(queue);
+    var sender: QueueSender = session.createSender(queue);
     var msg: BackchannelMessage = new BackchannelMessage(lineFound,hashFound)
     var oMsg: ObjectMessage = session.createObjectMessage(msg)
-    sender.send(oMsg, new CompletionListener {
-      override def onException(message: Message, e: Exception): Unit = {println(">>> EXCEPTION " + e)}
-      override def onCompletion(message: Message): Unit = {println("message: " + message + " :: " + message.getJMSDestination)}
-    })
+    sender.send(oMsg)
     session.close
     connection.close
     println("backchannel sent %s".format(lineFound))
