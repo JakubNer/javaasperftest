@@ -14,7 +14,7 @@ Kick off queueing 'sticks of hay' (lines of text) onto a farily hardcoded messag
 
 JMS queue reads/writes using netty for Hornet:
 
-    192.168.0.119;port=5445
+    192.168.0.118;port=5445
 
 Sample Wildfly standalone.xml:
 

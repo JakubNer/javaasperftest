@@ -19,7 +19,7 @@ import org.hornetq.api.jms.{HornetQJMSClient, JMSFactoryType}
     new ActivationConfigProperty(propertyName="user", propertyValue = "jms"),
     new ActivationConfigProperty(propertyName="password", propertyValue = "jms"),
     new ActivationConfigProperty(propertyName="connectorClassName", propertyValue = "org.hornetq.core.remoting.impl.netty.NettyConnectorFactory"),
-    new ActivationConfigProperty(propertyName="connectionParameters", propertyValue = "host=192.168.0.119;port=5445")),
+    new ActivationConfigProperty(propertyName="connectionParameters", propertyValue = "host=192.168.0.118;port=5445")),
   messageListenerInterface = classOf[MessageListener]
 )
 class NeedleFinder extends MessageListener {
@@ -45,7 +45,7 @@ class NeedleFinder extends MessageListener {
 
     var connectionParams : Map[String,Object] = new HashMap[String, Object]
     connectionParams.put(org.hornetq.core.remoting.impl.netty.TransportConstants.PORT_PROP_NAME,"5445")
-    connectionParams.put(org.hornetq.core.remoting.impl.netty.TransportConstants.HOST_PROP_NAME,"192.168.0.119")
+    connectionParams.put(org.hornetq.core.remoting.impl.netty.TransportConstants.HOST_PROP_NAME,"192.168.0.118")
     var transportConfiguration: TransportConfiguration = new TransportConfiguration(classOf[NettyConnectorFactory].getName,connectionParams)
 
     val factory: ConnectionFactory = HornetQJMSClient.createConnectionFactoryWithoutHA(JMSFactoryType.CF,transportConfiguration)

@@ -35,8 +35,8 @@ class Haystack {
         Eraser.erase
         queueClear
         Tracker.start
-        Tracker.hashes = getLinesOfText("/hashes.txt").toArray
-        val lines = getLinesOfText("/haystack.txt")
+        Tracker.hashes = getLinesOfText("/hashes2.txt").toArray
+        val lines = getLinesOfText("/haystack2.txt")
         var msgid = 0
         for (hash <- Tracker.hashes) {
           var it = lines.iterator
@@ -101,7 +101,7 @@ object Eraser {
     var env : HashMap[String,AnyRef] = new HashMap[String,AnyRef]()
     val creds : Array[String] = Array[String]("root","root")
     env.put(JMXConnector.CREDENTIALS, creds)
-    serviceURL = new JMXServiceURL("service:jmx:http-remoting-jmx://192.168.0.119:9990")
+    serviceURL = new JMXServiceURL("service:jmx:http-remoting-jmx://192.168.0.118:9990")
     jmxConnector = JMXConnectorFactory.connect(serviceURL, env)
     return jmxConnector.getMBeanServerConnection()
   }
@@ -172,7 +172,7 @@ object Tracker {
     new ActivationConfigProperty(propertyName="user", propertyValue = "jms"),
     new ActivationConfigProperty(propertyName="password", propertyValue = "jms"),
     new ActivationConfigProperty(propertyName="connectorClassName", propertyValue = "org.hornetq.core.remoting.impl.netty.NettyConnectorFactory"),
-    new ActivationConfigProperty(propertyName="connectionParameters", propertyValue = "host=192.168.0.119;port=5445")),
+    new ActivationConfigProperty(propertyName="connectionParameters", propertyValue = "host=192.168.0.118;port=5445")),
   messageListenerInterface = classOf[MessageListener]
 )
 class HaystackBackchannelWorker extends MessageListener {
