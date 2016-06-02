@@ -2,14 +2,10 @@ package template.producer
 
 import javax.ejb.{ActivationConfigProperty, MessageDriven, Singleton, Startup}
 import javax.jms.{MessageConsumer, MessageListener, ObjectMessage, Queue, QueueConnection, QueueConnectionFactory, QueueSender, QueueSession, Session}
-import javax.naming.{Context, InitialContext}
-import javax.management.{MBeanServerConnection, ObjectName}
+import javax.naming.{InitialContext}
 import java.io.InputStream
-import java.util.{Date, HashMap}
+import java.util.{Date}
 import javax.annotation.PostConstruct
-import javax.management.MBeanServerInvocationHandler
-import javax.management.remote.{JMXConnector, JMXConnectorFactory, JMXServiceURL}
-import org.hornetq.api.jms.management.JMSQueueControl
 
 import scala.collection.mutable.ListBuffer
 import template.messaging._
@@ -32,7 +28,6 @@ class Haystack {
     new Thread {
       override def run = {
         queueOpen
-        Eraser.erase
         queueClear
         Tracker.start
         Tracker.hashes = getLinesOfText("/hashes2.txt").toArray
@@ -47,7 +42,6 @@ class Haystack {
             queueUp(msgid, lines, Array(hash))
           }
           Tracker.waitTillFound(hash)
-          Eraser.erase
           queueClear
         }
         queueClose
@@ -88,30 +82,6 @@ class Haystack {
   def getLinesOfText(fileName:String): List[String] = {
     val stream : InputStream = getClass.getResourceAsStream(fileName)
     return scala.io.Source.fromInputStream(stream).getLines.toList
-  }
-}
-
-object Eraser {
-  var urlString : String = null
-  var serviceURL : JMXServiceURL = null
-  var jmxConnector : JMXConnector = null
-  var connection : MBeanServerConnection = getConn
-
-  def getConn() : MBeanServerConnection = {
-    var env : HashMap[String,AnyRef] = new HashMap[String,AnyRef]()
-    val creds : Array[String] = Array[String]("root","root")
-    env.put(JMXConnector.CREDENTIALS, creds)
-    serviceURL = new JMXServiceURL("service:jmx:http-remoting-jmx://192.168.0.118:9990")
-    jmxConnector = JMXConnectorFactory.connect(serviceURL, env)
-    return jmxConnector.getMBeanServerConnection()
-  }
-
-  def erase = {
-    println("queueClear start")
-    var on : ObjectName = new ObjectName("jboss.as:subsystem=messaging,hornetq-server=default,jms-queue=HaystackQueue")
-    var qc : JMSQueueControl = MBeanServerInvocationHandler.newProxyInstance(connection, on, classOf[JMSQueueControl], false).asInstanceOf[JMSQueueControl]
-    val numremoved = qc.removeMessages(null)
-    println("queueClear stop... removed:%d".format(numremoved))
   }
 }
 
