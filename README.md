@@ -1,10 +1,17 @@
 # What is this?
 
-Maven project to generate a WAR with a bunch of endpoint to excercise some architectural approaches on an application server.
+Are you using an Application Server (AS)--such as JBoss/WildFly--that has modules coupled to other layered modules running on the same AS?  If you've tried to make microservices out of a monolith it's quite possible you've got code that does exactly this.
 
-# YouTube Videos
+This Maven project generates a WAR with a bunch of endpoints to excercise some architectural approaches of the above.
 
-## producer/consumer
+This module is a demo/teaching tool as to how resources are possibly wasted.  It has endpoints to enable comparisson of alternate architectures:
+
+* synchronous loopback callbacks (problem, runs out of request threads)
+* asynchronous loopback callbacks (problem, runs out of client connections unless async APIs shared among modules)
+* akka (nice but needs to be pervasive)
+* queueing (nice, maybe use Apache Camel?)
+
+The purpose of this is to convey how the application server interacts between request connections/threads, client connections (outgoing connections)
 
 # Haystack JARs (Demo 1)
 
